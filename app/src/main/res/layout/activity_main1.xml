@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+   android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+ >
+
+    <TextView
+        android:id="@+id/webV"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="直接构造request" />
+    <TextView
+        android:id="@+id/webV1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginTop="20dip"
+        android:layout_marginBottom="20dip"
+        android:padding="10dip"
+        android:text="retrofit+rxjava+gjson" />
+    <TextView
+        android:id="@+id/webV2"
+        android:layout_marginTop="20dip"
+        android:layout_marginBottom="20dip"
+        android:padding="10dip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:background="@color/colorPrimaryDark"
+        android:text="Hello World!" />
+    <TextView
+        android:layout_marginTop="20dip"
+        android:layout_marginBottom="20dip"
+        android:padding="10dip"
+        android:id="@+id/webV3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="retrofit+rxjava+gjson获取返回的原始值" />
+
+</LinearLayout>
