@@ -57,7 +57,7 @@ public class DingService extends AccessibilityService {
     public final static int COMMAND_KAOQIN_PM = 2;//下午打卡
     public final static int COMMAND_UPDATE_KAOQIN_PM = 3;//更新下午打卡
     public final static int COMMAND_NONE = 4;//默认指令
-    private int mCommand = COMMAND_KAOQIN_AM;
+    private int mCommand = COMMAND_NONE;
     //打卡指令对应对的扣扣消息
     private final static String QQ_TEXT_AM = " 上班打卡";
     private final static String QQ_TEXT_PM = " 下班打卡";
@@ -87,8 +87,8 @@ public class DingService extends AccessibilityService {
     public final static int LIGHT_CHECK = 3;
     public static int mCountBtnCLick=0;//电源键模拟的次数
     public final static int DELAY_TIME = 500;
+    KeyguardManager km;
     public static Handler lightHandler = new Handler() {
-
         @Override
         public void handleMessage(Message msg) {
             if (msg.what == CLICK_POWER_BTN||msg.what == LIGHT_START) {
@@ -127,10 +127,8 @@ public class DingService extends AccessibilityService {
         Log.e(TAG, "----######---server is onCreate ----######---");
         super.onCreate();
         /**解锁屏幕**/
-        KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         kl = km.newKeyguardLock("unLock");
-        //解锁
-        kl.disableKeyguard();
         //设置前台应用
         createNotifition();
         mContext = this;
@@ -145,7 +143,7 @@ public class DingService extends AccessibilityService {
         ArrayList<String> texts = new ArrayList<String>();
         Log.i(TAG, "事件---->" + event.getEventType() + "app包名---->" + event.getPackageName());
         String pkgName = event.getPackageName().toString();
-        if (PKG_DINGDING.equals(pkgName) && tryCounts < MAX_CLICK_TIMES) {
+        if (PKG_DINGDING.equals(pkgName) && tryCounts < MAX_CLICK_TIMES&&mCommand != COMMAND_NONE) {
             if (mCommand == COMMAND_KAOQIN_PM) {
                 if (!checkTime()) {//为到下午打卡时间
                     return;
@@ -612,6 +610,7 @@ public class DingService extends AccessibilityService {
         //点亮屏幕
         wl.acquire();
         //释放
+        km.isKeyguardLocked();
         wl.release();
         if (!pm.isScreenOn()) {
             if (lightHandler != null&&mCountBtnCLick==0) {
@@ -620,15 +619,31 @@ public class DingService extends AccessibilityService {
                 Log.e(TAG, "lightHandler can not be null or is click working  now");
             }
         }
+        if (km.isKeyguardLocked()){
+            kl.disableKeyguard();
+            km.exitKeyguardSecurely(new KeyguardManager.OnKeyguardExitResult() {
+                @Override
+                public void onKeyguardExitResult(boolean success) {
+                    if (success){
+                        Log.i(TAG, " keyGarud is Unlocked -_-");
+                    }else{
+                        Log.i(TAG, " keyGarud is locked ,unlock again");
+                        if (kl != null) {
+                            kl.reenableKeyguard();
+                        }
+                        kl.disableKeyguard();
+                        km.exitKeyguardSecurely(this);
+                    }
+                }
+            });
+        }
     }
 
     @Override
     public void onDestroy() {
         Log.e(TAG, "----######---server is onDestroy  ----######---");
         super.onDestroy();
-        if (kl != null) {
-            kl.reenableKeyguard();
-        }
+
         mContext = null;
         lightHandler = null;
     }
