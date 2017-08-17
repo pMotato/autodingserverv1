@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
         }else{
             startTime=DateFormat.format("yyyy-MM-dd hh:mm:ss",System.currentTimeMillis()).toString();
             mTips.setText("Ding Server StartTime:\n"+ startTime);
+
         }
     }
 

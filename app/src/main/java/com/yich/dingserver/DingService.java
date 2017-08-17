@@ -15,25 +15,48 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Rect;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
 import android.os.PowerManager;
+import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Toast;
 
+import com.sun.mail.util.MailSSLSocketFactory;
 import com.yich.webcliemt.BuildConfig;
 import com.yich.webcliemt.R;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import javax.activation.CommandMap;
+import javax.activation.DataHandler;
+import javax.activation.FileDataSource;
+import javax.activation.MailcapCommandMap;
+import javax.mail.Address;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+
+import rx.Observable;
+import rx.Observer;
+import rx.schedulers.Schedulers;
 
 public class DingService extends AccessibilityService {
 
@@ -63,7 +86,7 @@ public class DingService extends AccessibilityService {
     private final static String QQ_TEXT_PM = " 下班打卡";
     private static final String QQ_TEXT_STOP_DINGDING = " 关闭钉钉";
     private static final String QQ_TEXT_UPDATE_KAOQIN = " 更新下班打卡";
-
+    private static final String MAIL_TEXT = "到达打卡界面";
 
     //各个打卡指令的小步骤
     private int mMiniStep = 0;
@@ -78,6 +101,8 @@ public class DingService extends AccessibilityService {
     private boolean canKaoqinPageClickable = false;
     private int kaoQinChangeCount = 0;
     private int tryCounts = 0;
+    //打卡时候有发送邮件
+    private boolean hasSendMail=false;
     private Rect webRect;
     private KeyguardManager.KeyguardLock kl;
     private static Context mContext;
@@ -85,24 +110,25 @@ public class DingService extends AccessibilityService {
     public final static int CLICK_POWER_BTN = 1;
     public final static int LIGHT_END = 2;
     public final static int LIGHT_CHECK = 3;
-    public static int mCountBtnCLick=0;//电源键模拟的次数
+    public static int mCountBtnCLick = 0;//电源键模拟的次数
     public final static int DELAY_TIME = 500;
+
     KeyguardManager km;
     public static Handler lightHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            if (msg.what == CLICK_POWER_BTN||msg.what == LIGHT_START) {
+            if (msg.what == CLICK_POWER_BTN || msg.what == LIGHT_START) {
                 mCountBtnCLick++;
-                Log.w(TAG, "light screen by power btn,try time:"+mCountBtnCLick);
+                Log.w(TAG, "light screen by power btn,try time:" + mCountBtnCLick);
                 execShellCmd("input keyevent " + KeyEvent.KEYCODE_POWER);
                 sendEmptyMessageDelayed(LIGHT_CHECK, DELAY_TIME);
             }
             if (msg.what == LIGHT_CHECK) {
                 if (mContext != null) {
-                    PowerManager pm =(PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
-                    if (pm.isScreenOn()){
+                    PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+                    if (pm.isScreenOn()) {
                         sendEmptyMessage(LIGHT_END);
-                    }else{
+                    } else {
                         sendEmptyMessageDelayed(CLICK_POWER_BTN, DELAY_TIME);
                     }
                 } else {
@@ -110,13 +136,14 @@ public class DingService extends AccessibilityService {
                 }
             }
             if (msg.what == LIGHT_END) {
-                mCountBtnCLick=0;
+                mCountBtnCLick = 0;
             }
         }
-        boolean isWorking(){
-            if (mCountBtnCLick>0){
+
+        boolean isWorking() {
+            if (mCountBtnCLick > 0) {
                 return true;
-            }else{
+            } else {
                 return false;
             }
         }
@@ -141,9 +168,9 @@ public class DingService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         ArrayList<String> texts = new ArrayList<String>();
-        Log.i(TAG, "事件---->" + event.getEventType() + "app包名---->" + event.getPackageName());
+//        Log.i(TAG, "事件---->" + event.getEventType() + "app包名---->" + event.getPackageName());
         String pkgName = event.getPackageName().toString();
-        if (PKG_DINGDING.equals(pkgName) && tryCounts < MAX_CLICK_TIMES&&mCommand != COMMAND_NONE) {
+        if (PKG_DINGDING.equals(pkgName) && tryCounts < MAX_CLICK_TIMES && mCommand != COMMAND_NONE) {
             if (mCommand == COMMAND_KAOQIN_PM) {
                 if (!checkTime()) {//为到下午打卡时间
                     return;
@@ -183,9 +210,11 @@ public class DingService extends AccessibilityService {
 
                 if ((CONFIG_QQ_NUM + ":" + QQ_TEXT_PM).equals(notiText)) {
                     initCommand(COMMAND_KAOQIN_PM);
+                    sendQQMail("开始下班打卡");
                     prepareForKaoQin();
                 } else if ((CONFIG_QQ_NUM + ":" + QQ_TEXT_AM).equals(notiText)) {
                     initCommand(COMMAND_KAOQIN_AM);
+                    sendQQMail("开始上班打卡");
                     prepareForKaoQin();
                 } else if ((CONFIG_QQ_NUM + ":" + QQ_TEXT_STOP_DINGDING).equals(notiText)) {
                     wakeUpAndUnlock(this);
@@ -193,11 +222,115 @@ public class DingService extends AccessibilityService {
                     stopProcessByPKG(PKG_DINGDING);
                 } else if ((CONFIG_QQ_NUM + ":" + QQ_TEXT_UPDATE_KAOQIN).equals(notiText)) {
                     initCommand(COMMAND_UPDATE_KAOQIN_PM);
+                    sendQQMail("开始更新下班打卡");
                     prepareForKaoQin();
                 }
             }
         }
     }
+
+    private void sendQQMail(String msg1) {
+        if (hasSendMail){
+            Log.e(TAG, "hasSendMail already");
+            return ;
+        }
+        Observable.just(msg1).subscribeOn(Schedulers.io()).observeOn(Schedulers.io()).subscribe(new Observer<String>() {
+            @Override
+            public void onCompleted() {
+                Log.e(TAG, "onCompleted");
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onNext(String o) {
+                if (o.contains(MAIL_TEXT)){
+                           hasSendMail=true;
+                    schedulerSendImgTask(o+"截图");
+                }else{
+                    sendMailMsg(o);
+                }
+            }
+        });
+
+    }
+
+    public void sendMailMsgwithImg(String msg1,String imgurl) {
+        try {
+            String sendMsg = "[" + DateFormat.format("yyyy-MM-dd hh:mm:ss",System.currentTimeMillis()).toString() + "]" + msg1;
+            Properties props = new Properties();
+            // 开启debug调试
+            MailSSLSocketFactory sf = new MailSSLSocketFactory();
+            sf.setTrustAllHosts(true);
+            props.put("mail.smtp.ssl.enable", "true");
+            props.put("mail.smtp.ssl.socketFactory", sf);
+
+            props.setProperty("mail.debug", "false");
+            // 发送邮件协议名称
+            props.setProperty("mail.transport.protocol", "smtp");
+            props.setProperty("mail.smtp.host", "smtp.qq.com");
+
+            props.setProperty("mail.smtp.auth", "true");
+
+            // 设置环境信息
+            Session session= Session.getInstance(props);
+
+            // 创建邮件对象
+            javax.mail.Message msg = new MimeMessage(session);
+            msg.setSubject("打卡记录");
+            /***********************/
+            MimeBodyPart text = new MimeBodyPart();
+            // setContent(“邮件的正文内容”,”设置邮件内容的编码方式”)
+            text.setContent(msg1+"<img src='cid:a'>","text/html;charset=utf-8");
+            MimeBodyPart img = new MimeBodyPart();
+         /*JavaMail API不限制信息只为文本,任何形式的信息都可能作茧自缚MimeMessage的一部分.
+        * 除了文本信息,作为文件附件包含在电子邮件信息的一部分是很普遍的.
+        * JavaMail API通过使用DataHandler对象,提供一个允许我们包含非文本BodyPart对象的简便方法.*/
+            DataHandler dh = new DataHandler(new FileDataSource(imgurl));
+            img.setDataHandler(dh);
+            //创建图片的一个表示用于显示在邮件中显示
+            img.setContentID("a");
+            //关系   正文和图片的
+            MimeMultipart mm = new MimeMultipart();
+            mm.addBodyPart(text);
+            mm.addBodyPart(img);
+            mm.setSubType("related");//设置正文与图片之间的关系
+            //图班与正文的 body
+            MimeBodyPart all = new MimeBodyPart();
+            all.setContent(mm);
+            //附件与正文（text 和 img）的关系
+            MimeMultipart mm2 = new MimeMultipart();
+            mm2.addBodyPart(all);
+            mm2.setSubType("mixed");//设置正文与附件之间的关系
+            msg.setContent(mm2);
+            msg.saveChanges(); //保存修改
+            MailcapCommandMap mc = (MailcapCommandMap) CommandMap.getDefaultCommandMap();
+            mc.addMailcap("text/html;; x-java-content-handler=com.sun.mail.handlers.text_html");
+            mc.addMailcap("text/xml;; x-java-content-handler=com.sun.mail.handlers.text_xml");
+            mc.addMailcap("text/plain;; x-java-content-handler=com.sun.mail.handlers.text_plain");
+            mc.addMailcap("multipart/*;; x-java-content-handler=com.sun.mail.handlers.multipart_mixed");
+            mc.addMailcap("message/rfc822;; x-java-content-handler=com.sun.mail.handlers.message_rfc822");
+            CommandMap.setDefaultCommandMap(mc);
+            /***********************/
+            // 设置发件人
+            msg.setFrom(new InternetAddress(CONFIG_QQ_NUM+"@qq.com"));
+            //发送邮件
+            Transport transport = session.getTransport();
+            transport.connect("smtp.qq.com",CONFIG_QQ_NUM+"@qq.com", BuildConfig.QQ_MAIL_CODE);
+
+            transport.sendMessage(msg, new Address[] { new InternetAddress(CONFIG_QQ_NUM+"@qq.com") });
+            transport.close();
+
+            System.out.println("成功");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
     private void initCommand(int commandKaoqinPm) {
         mMiniStep = 0;
@@ -208,6 +341,7 @@ public class DingService extends AccessibilityService {
         kaoQinChangeCount = 0;
         pageLoadedCount = 0;
         tryCounts = 0;//单次命令尝试点击次数
+        hasSendMail=false;
     }
 
     public boolean startAPP(String appPackageName) {
@@ -426,6 +560,13 @@ public class DingService extends AccessibilityService {
                     }
                     //点击我知道了的按钮
                     clickPointOnScreen(webRect.centerX(), (int) (21.2 * (webRect.bottom - webRect.top) / 27) + webRect.top);
+                    if (command==COMMAND_KAOQIN_AM){
+                        sendQQMail("【上班】"+MAIL_TEXT);
+                    }else{
+                        sendQQMail("【下班】"+MAIL_TEXT);
+                    }
+
+
                 }
 
                 break;
@@ -452,12 +593,36 @@ public class DingService extends AccessibilityService {
                     clickPointOnScreen(3 * webRect.centerX() / 2, (int) (21.2 * (webRect.bottom - webRect.top) / 27) + webRect.top);
                     //点击我知道了的按钮
                     clickPointOnScreen(webRect.centerX(), (int) (21.2 * (webRect.bottom - webRect.top) / 27) + webRect.top);
+                    sendQQMail("【更新下班】"+MAIL_TEXT);
                 }
                 break;
             default:
                 Log.w(TAG, "unkown comand: code is:" + command);
                 break;
-        }
+       }
+    }
+
+    private void schedulerSendImgTask(final String msg) {
+        Timer timer=new Timer();
+        //小米的截屏
+
+        TimerTask  mTask=new TimerTask() {
+            @Override
+            public void run() {
+                String mSavedPath=getSDPath();
+                   execShellCmd("screencap -p  " + mSavedPath+"/cardImg.png");
+            }
+        };
+        TimerTask  mSendTask=new TimerTask() {
+            @Override
+            public void run() {
+                String mSavedPath=getSDPath();
+                sendMailMsgwithImg(msg,mSavedPath+"/cardImg.png");
+            }
+        };
+        timer.schedule(mTask,15*1000);
+        timer.schedule(mSendTask,17*1000);
+
     }
 
     /**
@@ -467,13 +632,13 @@ public class DingService extends AccessibilityService {
         Date cur = Calendar.getInstance().getTime();
         Date m9 = (Date) cur.clone();
         Date m18 = (Date) cur.clone();
-        int offwork=18;
-        if (null!=CONFIG_OFF_DUTY){
-             try {
-                 offwork=Integer.valueOf(CONFIG_OFF_DUTY);
-             }catch (Exception e){
-                 offwork=18;
-             }
+        int offwork = 18;
+        if (null != CONFIG_OFF_DUTY) {
+            try {
+                offwork = Integer.valueOf(CONFIG_OFF_DUTY);
+            } catch (Exception e) {
+                offwork = 18;
+            }
         }
         m18.setHours(offwork);
         if (mCommand == COMMAND_KAOQIN_PM && cur.getTime() < m18.getTime()) {
@@ -584,12 +749,12 @@ public class DingService extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
-        // TODO Auto-generated method stub
+
     }
 
     @Override
     protected void onServiceConnected() {
-        // TODO Auto-generated method stub
+
         super.onServiceConnected();
         Log.i(TAG, "service connected!");
         Toast.makeText(getApplicationContext(), "连接成功！", Toast.LENGTH_LONG).show();
@@ -613,20 +778,20 @@ public class DingService extends AccessibilityService {
         km.isKeyguardLocked();
         wl.release();
         if (!pm.isScreenOn()) {
-            if (lightHandler != null&&mCountBtnCLick==0) {
+            if (lightHandler != null && mCountBtnCLick == 0) {
                 lightHandler.sendEmptyMessage(LIGHT_START);
             } else {
                 Log.e(TAG, "lightHandler can not be null or is click working  now");
             }
         }
-        if (km.isKeyguardLocked()){
+        if (km.isKeyguardLocked()) {
             kl.disableKeyguard();
             km.exitKeyguardSecurely(new KeyguardManager.OnKeyguardExitResult() {
                 @Override
                 public void onKeyguardExitResult(boolean success) {
-                    if (success){
+                    if (success) {
                         Log.i(TAG, " keyGarud is Unlocked -_-");
-                    }else{
+                    } else {
                         Log.i(TAG, " keyGarud is locked ,unlock again");
                         if (kl != null) {
                             kl.reenableKeyguard();
@@ -664,4 +829,77 @@ public class DingService extends AccessibilityService {
     }
 
     public static int NOTIFICATION_ID = 10000;
+
+    public String getLastImgPath() {
+        String fullPicPath="none";
+        if (mContext!=null){
+              File piDir=new File(getSDPath()+"/DCIM/Screenshots/");
+            if (piDir!=null&&piDir.isDirectory()){
+                File[] pics=piDir.listFiles();
+                if (pics!=null&&pics.length>0){
+                    for (int i = 0; i <pics.length ; i++) {
+                        if (i==0){
+                            fullPicPath=pics[i].getAbsolutePath();
+                        }else{
+                            if (pics[i].lastModified()>pics[i-1].lastModified()){
+                                fullPicPath=pics[i].getAbsolutePath();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return fullPicPath;
+    }
+
+    public String getSDPath(){
+        File sdDir = new File( "/mnt/sdcard");
+        boolean sdCardExist = Environment.getExternalStorageState()
+                .equals(android.os.Environment.MEDIA_MOUNTED);//判断sd卡是否存在
+        if(sdCardExist)
+        {
+            sdDir = Environment.getExternalStorageDirectory();//获取跟目录
+        }
+        return sdDir.toString();
+    }
+    public void sendMailMsg(String msg1) {
+        try {
+            String sendMsg = "[" + DateFormat.format("yyyy-MM-dd hh:mm:ss",System.currentTimeMillis()).toString() + "]" + msg1;
+            Properties props = new Properties();
+            // 开启debug调试
+            MailSSLSocketFactory sf = new MailSSLSocketFactory();
+            sf.setTrustAllHosts(true);
+            props.put("mail.smtp.ssl.enable", "true");
+            props.put("mail.smtp.ssl.socketFactory", sf);
+
+            props.setProperty("mail.debug", "false");
+            // 发送邮件协议名称
+            props.setProperty("mail.transport.protocol", "smtp");
+            props.setProperty("mail.smtp.host", "smtp.qq.com");
+
+            props.setProperty("mail.smtp.auth", "true");
+
+            // 设置环境信息
+            Session session= Session.getInstance(props);
+
+            // 创建邮件对象
+            javax.mail.Message msg = new MimeMessage(session);
+            msg.setSubject("打卡记录");
+            // 设置邮件内容
+            msg.setText(sendMsg);
+            // 设置发件人
+            msg.setFrom(new InternetAddress(CONFIG_QQ_NUM+"@qq.com"));
+            //发送邮件
+            Transport transport = session.getTransport();
+            transport.connect("smtp.qq.com",CONFIG_QQ_NUM+"@qq.com", BuildConfig.QQ_MAIL_CODE);
+
+            transport.sendMessage(msg, new Address[] { new InternetAddress(CONFIG_QQ_NUM+"@qq.com") });
+            transport.close();
+
+            System.out.println("成功");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }

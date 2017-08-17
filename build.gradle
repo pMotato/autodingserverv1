@@ -27,7 +27,9 @@ ext{
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
     timeOffWork="18"
     qqNickName="601816643"
+    qqMailCode="xxxxxx"
     //loacl 中读取
     qqNickName = properties.getProperty('QQ_NICK_NAME')
     timeOffWork= properties.getProperty('TIME_OFF_WORK')
+    qqMailCode= properties.getProperty('QQ_MAIL_CODE')
 }

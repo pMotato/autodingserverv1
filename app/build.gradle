@@ -18,13 +18,21 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             buildConfigField "String", "QQ_NICK_NAME", qqNickName
             buildConfigField "String", "TIME_OFF_WORK", timeOffWork
+            buildConfigField "String", "QQ_MAIL_CODE", qqMailCode
         }
         debug{
             debuggable true
             buildConfigField "String", "QQ_NICK_NAME", qqNickName
             buildConfigField "String", "TIME_OFF_WORK", timeOffWork
+            buildConfigField "String", "QQ_MAIL_CODE", qqMailCode
 
         }
+    }
+
+    packagingOptions{
+
+        exclude 'META-INF/mailcap'
+        exclude 'META-INF/javamail.providers'
     }
 }
 
@@ -47,4 +55,6 @@ dependencies {
     compile "com.squareup.retrofit2:adapter-rxjava:2.2.0"
     compile "com.orhanobut:dialogplus:1.11@aar"
     compile "com.github.bumptech.glide:glide:3.6.1"
+    compile 'com.sun.mail:android-mail:1.5.5'
+    compile 'com.sun.mail:android-activation:1.5.5'
 }
