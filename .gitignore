@@ -1,9 +1,13 @@
 *.iml
 .gradle
-/local.properties
+
 /.idea/workspace.xml
 /.idea/libraries
 .DS_Store
 /build
 /captures
 .externalNativeBuild
+.idea/markdown-navigator.xml
+.idea/markdown-navigator/
+app/src/main/res/drawable/
+art/
