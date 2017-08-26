@@ -92,6 +92,8 @@ public class DingService extends AccessibilityService {
     private int mMiniStep = 0;
     //发送者扣扣的昵称
     private final static String CONFIG_QQ_NUM = BuildConfig.QQ_NICK_NAME;
+    //发送者扣扣的昵称
+    private final static String CONFIG_QQ_NUM1 = BuildConfig.QQ_NUM;
     //下午下班时间
     private final static String CONFIG_OFF_DUTY = BuildConfig.TIME_OFF_WORK;
 
@@ -316,12 +318,12 @@ public class DingService extends AccessibilityService {
             CommandMap.setDefaultCommandMap(mc);
             /***********************/
             // 设置发件人
-            msg.setFrom(new InternetAddress(CONFIG_QQ_NUM+"@qq.com"));
+            msg.setFrom(new InternetAddress(CONFIG_QQ_NUM1+"@qq.com"));
             //发送邮件
             Transport transport = session.getTransport();
-            transport.connect("smtp.qq.com",CONFIG_QQ_NUM+"@qq.com", BuildConfig.QQ_MAIL_CODE);
+            transport.connect("smtp.qq.com",CONFIG_QQ_NUM1+"@qq.com", BuildConfig.QQ_MAIL_CODE);
 
-            transport.sendMessage(msg, new Address[] { new InternetAddress(CONFIG_QQ_NUM+"@qq.com") });
+            transport.sendMessage(msg, new Address[] { new InternetAddress(CONFIG_QQ_NUM1+"@qq.com") });
             transport.close();
 
             System.out.println("成功");

@@ -19,12 +19,15 @@ android {
             buildConfigField "String", "QQ_NICK_NAME", qqNickName
             buildConfigField "String", "TIME_OFF_WORK", timeOffWork
             buildConfigField "String", "QQ_MAIL_CODE", qqMailCode
+            buildConfigField "String", "QQ_NUM", qqnum
         }
         debug{
             debuggable true
             buildConfigField "String", "QQ_NICK_NAME", qqNickName
             buildConfigField "String", "TIME_OFF_WORK", timeOffWork
             buildConfigField "String", "QQ_MAIL_CODE", qqMailCode
+            buildConfigField "String", "QQ_NUM", qqnum
+
 
         }
     }

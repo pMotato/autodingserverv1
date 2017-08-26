@@ -32,4 +32,5 @@ ext{
     qqNickName = properties.getProperty('QQ_NICK_NAME')
     timeOffWork= properties.getProperty('TIME_OFF_WORK')
     qqMailCode= properties.getProperty('QQ_MAIL_CODE')
+    qqnum= properties.getProperty('QQ_NUM')
 }
