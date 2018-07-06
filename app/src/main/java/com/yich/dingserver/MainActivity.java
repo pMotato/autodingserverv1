@@ -8,7 +8,10 @@ import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.format.DateFormat;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.yich.webcliemt.R;
 
@@ -19,14 +22,26 @@ import java.util.Date;
  */
 public class MainActivity extends AppCompatActivity {
     private TextView mTips;
+    private Button setting;
    private String startTime;
     public static String ACTION_LIGHT_SCREEN="light_screen";
     NetworkConnectChangedReceiver receiver;
+    private Intent serviceIntent;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Toast.makeText(this,"记得在系统->设置->辅助功能中 开启DingdingTool",Toast.LENGTH_LONG).show();
         mTips=(TextView)this.findViewById(R.id.tv_tip);
+        setting=(Button)this.findViewById(R.id.setting);
+        setting.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stopService(serviceIntent);
+                Intent intent=new Intent(MainActivity.this,SettingActivity.class);
+                startActivity(intent);
+            }
+        });
         //开启网络监听
         IntentFilter filter = new IntentFilter();
          receiver=new NetworkConnectChangedReceiver();
@@ -36,7 +51,9 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction("light_screen");
         registerReceiver(receiver,filter);
        //开启服务
-        startService(new Intent(this,DingService.class));
+        serviceIntent=null;
+        serviceIntent=new Intent(this,DingService.class);
+        startService(serviceIntent);
         if (savedInstanceState != null
                 && savedInstanceState.getString("startTime")!=null) {
             mTips.setText("Ding Server StartTime:\n"+savedInstanceState.getString("startTime"));

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+     <TextView
+         android:textSize="15sp"
+         android:textColor="#ff0000"
+         android:text="首先要有2个扣扣号并且用户有2部手机：一部测试机，放在打卡范围内（例如就放在公司），一部是自己的手机用来控制测试机（记得开启这个apk无障碍的功能）
+ 控制方式：自己的手机通过手机qq的软件（简称为：发送者qq，发送者qq的相关信息可以在代码里面配置也可以在app的打包设置里面配置）可以发送如下命令来控制钉钉
+ a.上班打卡
+ b.下班打卡
+ c.更新下班打卡
+ d.关闭钉钉"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content" />
+    <EditText
+        android:id="@+id/qq_name"
+        android:hint="发送者qq的昵称（必填）"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+
+
+    <EditText
+        android:id="@+id/qq_num"
+        android:hint="接受邮件的QQ号，用于发邮箱给发送者（可选）"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <TextView
+        android:layout_marginTop="10dp"
+        android:textSize="15sp"
+        android:textColor="#ff0000"
+        android:text="当前手机的的qq号的开通邮箱授权码的code"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <EditText
+        android:id="@+id/email_code"
+        android:hint="开通授权stmp的code(可选)"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+
+    <Button
+        android:id="@+id/save_info"
+        android:text="保存配置"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+</LinearLayout>

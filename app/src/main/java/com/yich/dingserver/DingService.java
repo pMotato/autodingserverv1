@@ -14,6 +14,7 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.os.Environment;
 import android.os.Handler;
@@ -91,11 +92,12 @@ public class DingService extends AccessibilityService {
     //各个打卡指令的小步骤
     private int mMiniStep = 0;
     //发送者扣扣的昵称
-    private final static String CONFIG_QQ_NUM = BuildConfig.QQ_NICK_NAME;
-    //发送者扣扣的昵称
-    private final static String CONFIG_QQ_NUM1 = BuildConfig.QQ_NUM;
+    private   String CONFIG_QQ_NUM = BuildConfig.QQ_NICK_NAME;
+    //发送者扣扣的号码
+    private   String CONFIG_QQ_NUM1 = BuildConfig.QQ_NUM;
+    private   String CONFIG_QQ_MAIL = BuildConfig.QQ_MAIL_CODE;
     //下午下班时间
-    private final static String CONFIG_OFF_DUTY = BuildConfig.TIME_OFF_WORK;
+    private   String CONFIG_OFF_DUTY = BuildConfig.TIME_OFF_WORK;
 
     private final static String PKG_DINGDING = "com.alibaba.android.rimet";
     private final static String PKG_QQ = "com.tencent.mobileqq";
@@ -160,7 +162,16 @@ public class DingService extends AccessibilityService {
         kl = km.newKeyguardLock("unLock");
         //设置前台应用
         createNotifition();
+        initSetting();
         mContext = this;
+    }
+
+    private void initSetting() {
+        SharedPreferences sp=getSharedPreferences("yich",MODE_PRIVATE);
+        CONFIG_QQ_MAIL= sp.getString(SettingActivity.QQ_EMAIL_CODE,"");
+        CONFIG_QQ_NUM1=  sp.getString(SettingActivity.QQ_NAME,"");
+        CONFIG_QQ_NUM=sp.getString(SettingActivity.QQ_NUM,"");
+
     }
 
     /**
@@ -170,7 +181,7 @@ public class DingService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         ArrayList<String> texts = new ArrayList<String>();
-//        Log.i(TAG, "事件---->" + event.getEventType() + "app包名---->" + event.getPackageName());
+        Log.i(TAG, "事件---->" + event.getEventType() + "app包名---->" + event.getPackageName());
         String pkgName = event.getPackageName().toString();
         if (PKG_DINGDING.equals(pkgName) && tryCounts < MAX_CLICK_TIMES && mCommand != COMMAND_NONE) {
             if (mCommand == COMMAND_KAOQIN_PM) {
@@ -321,7 +332,7 @@ public class DingService extends AccessibilityService {
             msg.setFrom(new InternetAddress(CONFIG_QQ_NUM1+"@qq.com"));
             //发送邮件
             Transport transport = session.getTransport();
-            transport.connect("smtp.qq.com",CONFIG_QQ_NUM1+"@qq.com", BuildConfig.QQ_MAIL_CODE);
+            transport.connect("smtp.qq.com",CONFIG_QQ_NUM1+"@qq.com", CONFIG_QQ_MAIL);
 
             transport.sendMessage(msg, new Address[] { new InternetAddress(CONFIG_QQ_NUM1+"@qq.com") });
             transport.close();

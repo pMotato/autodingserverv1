@@ -15,4 +15,10 @@
         android:textColor="@android:color/black"
         android:textSize="30dp"
         android:text="dingserver" />
+     <Button  android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:id="@+id/setting"
+         android:gravity="center"
+         android:text="去配置qq昵称等参数"
+         android:layout_alignParentBottom="true"/>
 </RelativeLayout>

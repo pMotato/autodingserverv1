@@ -24,7 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name="com.yich.dingserver.MainActivity"
+        <activity android:name="com.yich.dingserver.SettingActivity"
             android:theme="@style/AppThemeNoActionBar"
             >
             <intent-filter>
@@ -32,6 +32,11 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name="com.yich.dingserver.MainActivity"
+            android:theme="@style/AppThemeNoActionBar"
+            >
+
         </activity>
         <service
             android:name="com.yich.dingserver.DingService"
