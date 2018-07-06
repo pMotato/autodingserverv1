@@ -20,8 +20,9 @@
      c.更新下班打卡
      d.关闭钉钉
  ###  其他
-     新增配置页面
-     ![image](https://github.com/yuqiyich/autodingserverv1/blob/master/art/addsetting_hd.jpg)
+ 
+      新增配置页面
+![image](https://github.com/yuqiyich/autodingserverv1/blob/master/art/addsetting_hd.jpg)
      打卡成功发送邮件的截图
-     ![image](https://github.com/yuqiyich/autodingserverv1/blob/master/art/%E4%B8%8A%E7%8F%AD%E8%87%AA%E5%8A%A8%E6%89%93%E5%8D%A1%E6%88%90%E5%8A%9F%E4%B9%8B%E5%90%8E%E5%8F%91%E9%80%81%E9%82%AE%E4%BB%B6%E5%88%B0%E8%87%AA%E5%B7%B1%E9%82%AE%E7%AE%B1.png)
+![image](https://github.com/yuqiyich/autodingserverv1/blob/master/art/%E4%B8%8A%E7%8F%AD%E8%87%AA%E5%8A%A8%E6%89%93%E5%8D%A1%E6%88%90%E5%8A%9F%E4%B9%8B%E5%90%8E%E5%8F%91%E9%80%81%E9%82%AE%E4%BB%B6%E5%88%B0%E8%87%AA%E5%B7%B1%E9%82%AE%E7%AE%B1.png)
           
